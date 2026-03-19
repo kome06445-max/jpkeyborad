@@ -5,6 +5,7 @@
 #include <cairo/cairo.h>
 #include <cairo/cairo-xcb.h>
 #include <pango/pangocairo.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>

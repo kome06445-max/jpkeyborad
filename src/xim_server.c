@@ -11,24 +11,25 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* XIM input style we support */
-static const xcb_im_styles_t input_styles = {
-    .nStyles = 3,
-    .styles = (uint32_t[]){
-        XCB_IM_PreeditPosition  | XCB_IM_StatusArea,
-        XCB_IM_PreeditNothing   | XCB_IM_StatusNothing,
-        XCB_IM_PreeditNone      | XCB_IM_StatusNone,
-    }
+static const uint32_t styles_array[] = {
+    XCB_IM_PreeditPosition  | XCB_IM_StatusArea,
+    XCB_IM_PreeditCallbacks | XCB_IM_StatusCallbacks,
+    XCB_IM_PreeditNothing   | XCB_IM_StatusNothing,
+    XCB_IM_PreeditNone      | XCB_IM_StatusNone,
 };
+
+static const xcb_im_styles_t input_styles = {
+    .nStyles = 4,
+    .styles = (uint32_t *)styles_array
+};
+
+static xcb_im_encoding_t encoding_names[] = { "COMPOUND_TEXT" };
 
 static const xcb_im_encodings_t encodings = {
     .nEncodings = 1,
-    .encodings = (xcb_im_encoding_t[]){
-        { .name = "COMPOUND_TEXT" }
-    }
+    .encodings = encoding_names
 };
 
-/* Per-IC (input context) state, stored via xcb_im_input_context_set_data */
 typedef struct {
     engine_context_t *engine;
 } ic_data_t;
@@ -47,6 +48,15 @@ static ic_data_t *ensure_ic_data(xcb_im_input_context_t *ic) {
     return d;
 }
 
+static void free_ic_data(xcb_im_input_context_t *ic) {
+    ic_data_t *d = get_ic_data(ic);
+    if (d) {
+        engine_context_destroy(d->engine);
+        free(d);
+        xcb_im_input_context_set_data(ic, NULL, NULL);
+    }
+}
+
 static void commit_string(xcb_im_t *im, xcb_im_input_context_t *ic,
                           const char *utf8) {
     if (!utf8 || !*utf8) return;
@@ -55,7 +65,7 @@ static void commit_string(xcb_im_t *im, xcb_im_input_context_t *ic,
     char *compound = xcb_utf8_to_compound_text(utf8, strlen(utf8), &compound_len);
     if (compound) {
         xcb_im_commit_string(im, ic, XCB_XIM_LOOKUP_CHARS,
-                             (char *)compound, compound_len, 0);
+                             compound, (uint32_t)compound_len, 0);
         free(compound);
     }
 }
@@ -64,14 +74,8 @@ static void update_preedit(xcb_im_t *im, xcb_im_input_context_t *ic,
                            engine_context_t *eng) {
     const char *preedit = engine_get_preedit(eng);
     if (!preedit || !*preedit) {
-        xcb_im_preedit_draw_fr_t frame = {0};
-        frame.caret = 0;
-        frame.chg_first = 0;
-        frame.chg_length = 0;
-        frame.preedit_string = NULL;
-        frame.length_of_preedit_string = 0;
-        frame.feedback_array.size = 0;
-        frame.feedback_array.items = NULL;
+        xcb_im_preedit_draw_fr_t frame;
+        memset(&frame, 0, sizeof(frame));
         xcb_im_preedit_draw_callback(im, ic, &frame);
         return;
     }
@@ -86,7 +90,8 @@ static void update_preedit(xcb_im_t *im, xcb_im_input_context_t *ic,
     for (uint32_t i = 0; i < text_len; i++)
         feedback[i] = XCB_XIM_UNDERLINE;
 
-    xcb_im_preedit_draw_fr_t frame = {0};
+    xcb_im_preedit_draw_fr_t frame;
+    memset(&frame, 0, sizeof(frame));
     frame.caret = (int32_t)text_len;
     frame.chg_first = 0;
     frame.chg_length = 0;
@@ -100,86 +105,89 @@ static void update_preedit(xcb_im_t *im, xcb_im_input_context_t *ic,
     free(feedback);
 }
 
-/* --- XIM Callbacks --- */
-
-static void handle_create_ic(xcb_im_t *im, xcb_im_input_context_t *ic,
-                             void *user_data) {
-    (void)im; (void)user_data;
-    ensure_ic_data(ic);
-    bsdjp_log("IC created");
-}
-
-static void handle_destroy_ic(xcb_im_t *im, xcb_im_input_context_t *ic,
-                              void *user_data) {
-    (void)im; (void)user_data;
-    ic_data_t *d = get_ic_data(ic);
-    if (d) {
-        engine_context_destroy(d->engine);
-        free(d);
-        xcb_im_input_context_set_data(ic, NULL, NULL);
-    }
-    bsdjp_log("IC destroyed");
-}
-
-static void handle_set_ic_focus(xcb_im_t *im, xcb_im_input_context_t *ic,
-                                void *user_data) {
-    (void)user_data;
-    ensure_ic_data(ic);
-    xcb_im_preedit_start_callback(im, ic);
-}
-
-static void handle_unset_ic_focus(xcb_im_t *im, xcb_im_input_context_t *ic,
-                                  void *user_data) {
-    (void)user_data;
-    (void)ic;
-    (void)im;
-}
-
-static void handle_forward_event(xcb_im_t *im, xcb_im_input_context_t *ic,
-                                 xcb_key_press_event_t *event,
-                                 void *user_data) {
-    (void)user_data;
-    ic_data_t *d = ensure_ic_data(ic);
+/*
+ * Single XIM callback handler.
+ * xcb-imdkit dispatches all XIM protocol messages through one callback.
+ * We dispatch based on the major opcode in the packet header.
+ */
+static void xim_callback(xcb_im_t *im, xcb_im_client_t *client,
+                          xcb_im_input_context_t *ic,
+                          const xcb_im_packet_header_fr_t *hdr,
+                          void *frame, void *arg, void *user_data) {
+    (void)client;
+    (void)arg;
     bsdjp_server_t *srv = (bsdjp_server_t *)user_data;
 
-    engine_result_t result = engine_process_key(d->engine, event, srv->conn);
+    uint8_t major = hdr->major_opcode;
 
-    switch (result.action) {
-    case ENGINE_ACTION_COMMIT:
-        commit_string(im, ic, result.commit_text);
-        update_preedit(im, ic, d->engine);
-        candidate_window_hide();
+    switch (major) {
+    case XCB_XIM_CREATE_IC:
+        ensure_ic_data(ic);
+        bsdjp_log("IC created");
         break;
 
-    case ENGINE_ACTION_PREEDIT:
-        update_preedit(im, ic, d->engine);
-        if (result.show_candidates && result.candidates && result.num_candidates > 0) {
-            candidate_window_show(srv->conn, srv->screen,
-                                  result.candidates, result.num_candidates,
-                                  result.selected_index);
-        } else {
+    case XCB_XIM_DESTROY_IC:
+        free_ic_data(ic);
+        bsdjp_log("IC destroyed");
+        break;
+
+    case XCB_XIM_SET_IC_FOCUS:
+        ensure_ic_data(ic);
+        xcb_im_preedit_start_callback(im, ic);
+        break;
+
+    case XCB_XIM_UNSET_IC_FOCUS:
+        break;
+
+    case XCB_XIM_FORWARD_EVENT: {
+        ic_data_t *d = ensure_ic_data(ic);
+        xcb_key_press_event_t *event = (xcb_key_press_event_t *)frame;
+
+        engine_result_t result = engine_process_key(d->engine, event, srv->conn);
+
+        switch (result.action) {
+        case ENGINE_ACTION_COMMIT:
+            commit_string(im, ic, result.commit_text);
+            update_preedit(im, ic, d->engine);
             candidate_window_hide();
+            break;
+
+        case ENGINE_ACTION_PREEDIT:
+            update_preedit(im, ic, d->engine);
+            if (result.show_candidates && result.candidates &&
+                result.num_candidates > 0) {
+                candidate_window_show(srv->conn, srv->screen,
+                                      result.candidates, result.num_candidates,
+                                      result.selected_index);
+            } else {
+                candidate_window_hide();
+            }
+            break;
+
+        case ENGINE_ACTION_FORWARD:
+            xcb_im_forward_event(im, ic, event);
+            break;
+
+        case ENGINE_ACTION_CONSUME:
+            break;
         }
-        break;
 
-    case ENGINE_ACTION_FORWARD:
-        xcb_im_forward_event(im, ic, event);
-        break;
-
-    case ENGINE_ACTION_CONSUME:
+        engine_result_free(&result);
         break;
     }
 
-    engine_result_free(&result);
-}
+    case XCB_XIM_RESET_IC: {
+        ic_data_t *d = get_ic_data(ic);
+        if (d) {
+            engine_context_destroy(d->engine);
+            d->engine = engine_context_create();
+        }
+        break;
+    }
 
-static bool handle_xim_callback(xcb_im_t *im, xcb_im_client_t *client,
-                                xcb_im_input_context_t *ic,
-                                const xcb_im_packet_header_fr_t *hdr,
-                                void *frame, void *arg, void *user_data) {
-    (void)im; (void)client; (void)ic;
-    (void)hdr; (void)frame; (void)arg; (void)user_data;
-    return true;
+    default:
+        break;
+    }
 }
 
 /* --- Public API --- */
@@ -208,24 +216,20 @@ int xim_server_init(bsdjp_server_t *srv) {
                       XCB_WINDOW_CLASS_INPUT_OUTPUT,
                       srv->screen->root_visual, 0, NULL);
 
-    xcb_im_trigger_key_t trigger_on = {
-        .keysym = XCB_NO_SYMBOL,
-        .modifier = 0,
-        .modifier_mask = 0
-    };
+    xcb_compound_text_init();
 
     srv->im = xcb_im_create(
         srv->conn,
         srv->screen_num,
         srv->server_win,
-        "BSDJP",                   /* server name */
+        "BSDJP",
         XCB_IM_ALL_LOCALES,
         &input_styles,
-        &trigger_on, 1,           /* on-keys */
-        NULL, 0,                  /* off-keys */
+        NULL,          /* on-keys (NULL = forward all) */
+        NULL,          /* off-keys */
         &encodings,
-        0,                        /* event mask */
-        handle_xim_callback,
+        0,             /* event_mask: 0 = XCB_EVENT_MASK_KEY_PRESS */
+        xim_callback,
         srv
     );
 
@@ -235,13 +239,6 @@ int xim_server_init(bsdjp_server_t *srv) {
     }
 
     xcb_im_set_use_sync_mode(srv->im, false);
-
-    /* Register per-IC callbacks */
-    xcb_im_set_create_ic_callback(srv->im, handle_create_ic, srv);
-    xcb_im_set_destroy_ic_callback(srv->im, handle_destroy_ic, srv);
-    xcb_im_set_set_ic_focus_callback(srv->im, handle_set_ic_focus, srv);
-    xcb_im_set_unset_ic_focus_callback(srv->im, handle_unset_ic_focus, srv);
-    xcb_im_set_forward_event_callback(srv->im, handle_forward_event, srv);
 
     if (!xcb_im_open_im(srv->im)) {
         bsdjp_error("Failed to open XIM");
@@ -272,7 +269,6 @@ void xim_server_run(bsdjp_server_t *srv) {
             continue;
         }
 
-        /* Handle candidate window expose events */
         uint8_t response_type = event->response_type & ~0x80;
         if (response_type == XCB_EXPOSE) {
             candidate_window_handle_expose(srv->conn);
