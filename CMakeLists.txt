@@ -32,12 +32,17 @@ add_executable(bsdjp
     src/util.c
 )
 
+find_path(X11_KEYSYM_DIR X11/keysym.h
+    PATHS /usr/include /usr/local/include
+)
+
 target_include_directories(bsdjp PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${XCB_INCLUDE_DIRS}
     ${XCB_IMDKIT_INCLUDE_DIRS}
     ${CAIRO_INCLUDE_DIRS}
     ${PANGO_INCLUDE_DIRS}
+    ${X11_KEYSYM_DIR}
 )
 
 target_link_libraries(bsdjp PRIVATE

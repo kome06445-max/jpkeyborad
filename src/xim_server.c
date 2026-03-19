@@ -11,23 +11,24 @@
 #include <stdlib.h>
 #include <string.h>
 
-static const uint32_t styles_array[] = {
+static uint32_t styles_array[] = {
     XCB_IM_PreeditPosition  | XCB_IM_StatusArea,
     XCB_IM_PreeditCallbacks | XCB_IM_StatusCallbacks,
     XCB_IM_PreeditNothing   | XCB_IM_StatusNothing,
     XCB_IM_PreeditNone      | XCB_IM_StatusNone,
 };
 
-static const xcb_im_styles_t input_styles = {
+static xcb_im_styles_t input_styles = {
     .nStyles = 4,
-    .styles = (uint32_t *)styles_array
+    .styles = styles_array
 };
 
-static xcb_im_encoding_t encoding_names[] = { "COMPOUND_TEXT" };
+static char encoding_name[] = "COMPOUND_TEXT";
+static xcb_im_encoding_t encoding_list[] = { encoding_name };
 
-static const xcb_im_encodings_t encodings = {
+static xcb_im_encodings_t encodings = {
     .nEncodings = 1,
-    .encodings = encoding_names
+    .encodings = encoding_list
 };
 
 typedef struct {
@@ -106,11 +107,6 @@ static void update_preedit(xcb_im_t *im, xcb_im_input_context_t *ic,
     free(feedback);
 }
 
-/*
- * Single XIM callback handler.
- * xcb-imdkit dispatches all XIM protocol messages through one callback.
- * We dispatch based on the major opcode in the packet header.
- */
 static void xim_callback(xcb_im_t *im, xcb_im_client_t *client,
                           xcb_im_input_context_t *ic,
                           const xcb_im_packet_header_fr_t *hdr,
@@ -119,9 +115,7 @@ static void xim_callback(xcb_im_t *im, xcb_im_client_t *client,
     (void)arg;
     bsdjp_server_t *srv = (bsdjp_server_t *)user_data;
 
-    uint8_t major = hdr->major_opcode;
-
-    switch (major) {
+    switch (hdr->major_opcode) {
     case XCB_XIM_CREATE_IC:
         ensure_ic_data(ic);
         bsdjp_log("IC created");
@@ -142,9 +136,9 @@ static void xim_callback(xcb_im_t *im, xcb_im_client_t *client,
 
     case XCB_XIM_FORWARD_EVENT: {
         ic_data_t *d = ensure_ic_data(ic);
-        xcb_key_press_event_t *event = (xcb_key_press_event_t *)frame;
+        xcb_key_press_event_t *ev = (xcb_key_press_event_t *)frame;
 
-        engine_result_t result = engine_process_key(d->engine, event, srv->conn);
+        engine_result_t result = engine_process_key(d->engine, ev, srv->conn);
 
         switch (result.action) {
         case ENGINE_ACTION_COMMIT:
@@ -166,7 +160,7 @@ static void xim_callback(xcb_im_t *im, xcb_im_client_t *client,
             break;
 
         case ENGINE_ACTION_FORWARD:
-            xcb_im_forward_event(im, ic, event);
+            xcb_im_forward_event(im, ic, ev);
             break;
 
         case ENGINE_ACTION_CONSUME:
@@ -226,10 +220,10 @@ int xim_server_init(bsdjp_server_t *srv) {
         "BSDJP",
         XCB_IM_ALL_LOCALES,
         &input_styles,
-        NULL,          /* on-keys (NULL = forward all) */
-        NULL,          /* off-keys */
+        NULL,
+        NULL,
         &encodings,
-        0,             /* event_mask: 0 = XCB_EVENT_MASK_KEY_PRESS */
+        0,
         xim_callback,
         srv
     );

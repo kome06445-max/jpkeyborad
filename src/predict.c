@@ -3,8 +3,10 @@
 #include "user_dict.h"
 #include "util.h"
 
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #define PREDICT_HISTORY_SIZE 256
 
