@@ -9,6 +9,7 @@
 #include <xcb/xcb.h>
 #include <xcb/xcb_keysyms.h>
 #include <X11/keysym.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>

@@ -86,17 +86,18 @@ static void update_preedit(xcb_im_t *im, xcb_im_input_context_t *ic,
     if (!compound) return;
 
     uint32_t text_len = (uint32_t)utf8_strlen(preedit);
-    xcb_im_feedback_t *feedback = bsdjp_calloc(text_len, sizeof(xcb_im_feedback_t));
+    uint32_t *feedback = bsdjp_calloc(text_len, sizeof(uint32_t));
     for (uint32_t i = 0; i < text_len; i++)
         feedback[i] = XCB_XIM_UNDERLINE;
 
     xcb_im_preedit_draw_fr_t frame;
     memset(&frame, 0, sizeof(frame));
-    frame.caret = (int32_t)text_len;
+    frame.caret = text_len;
     frame.chg_first = 0;
     frame.chg_length = 0;
+    frame.status = 0;
     frame.preedit_string = (uint8_t *)compound;
-    frame.length_of_preedit_string = (uint32_t)compound_len;
+    frame.length_of_preedit_string = (uint16_t)compound_len;
     frame.feedback_array.size = text_len;
     frame.feedback_array.items = feedback;
 
