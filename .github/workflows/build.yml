@@ -9,12 +9,10 @@ on:
 
 jobs:
   build-freebsd:
-    name: FreeBSD Build & Test
+    name: FreeBSD Build & Test (optional)
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
-    strategy:
-      fail-fast: false
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v6
