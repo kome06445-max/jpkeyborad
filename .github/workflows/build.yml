@@ -1,4 +1,4 @@
-name: Build BSDJP on FreeBSD
+name: Build BSDJP
 
 on:
   push:
@@ -8,17 +8,74 @@ on:
   workflow_dispatch:
 
 jobs:
+  full-build-ubuntu:
+    name: Full Build (Ubuntu + xcb-imdkit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake gcc g++ pkg-config meson ninja-build \
+            libxcb1-dev libxcb-util-dev libxcb-keysyms1-dev \
+            libxcb-util0-dev xcb-proto \
+            libcairo2-dev libpango1.0-dev \
+            libx11-dev x11proto-dev \
+            uthash-dev
+
+      - name: Build and install xcb-imdkit from source
+        run: |
+          git clone https://github.com/fcitx/xcb-imdkit.git /tmp/xcb-imdkit
+          cd /tmp/xcb-imdkit
+          mkdir build && cd build
+          cmake .. -DCMAKE_INSTALL_PREFIX=/usr
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
+          echo "=== xcb-imdkit installed ==="
+          pkg-config --modversion xcb-imdkit || echo "(pkg-config check)"
+
+      - name: Configure BSDJP
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_FLAGS="-Wall -Wextra -Werror"
+
+      - name: Build BSDJP
+        run: |
+          cd build
+          make -j$(nproc) VERBOSE=1
+
+      - name: Run tests
+        run: |
+          cd build
+          echo "=== Running romaji tests ==="
+          ./test_romaji
+          echo ""
+          echo "=== Running dict tests ==="
+          ./test_dict || echo "(no dictionary file, expected in CI)"
+
+      - name: Verify binary
+        run: |
+          ls -lh build/bsdjp
+          file build/bsdjp
+
   build-freebsd:
-    name: FreeBSD Build & Test (optional)
+    name: FreeBSD Build (optional)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     continue-on-error: true
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Build and test on FreeBSD
-        id: freebsd
         uses: vmactions/freebsd-vm@v1
         with:
           release: "14.2"
@@ -43,108 +100,14 @@ jobs:
           run: |
             set -e
             freebsd-version
-            echo ""
-            echo "=== Configuring ==="
-            mkdir -p build
-            cd build
+            mkdir -p build && cd build
             cmake .. \
               -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_C_FLAGS="-Wall -Wextra"
-
-            echo ""
-            echo "=== Building ==="
             make -j$(sysctl -n hw.ncpu)
-
-            echo ""
-            echo "=== Running romaji conversion tests ==="
+            echo "=== Running tests ==="
             ./test_romaji
-
-            echo ""
-            echo "=== Running dictionary tests ==="
-            ./test_dict || echo "(dictionary not present, expected in CI)"
-
-            echo ""
+            ./test_dict || echo "(no dictionary, expected)"
             echo "=== Build successful ==="
             ls -lh bsdjp
             file bsdjp
-
-  syntax-check:
-    name: Syntax & Structure Check (Ubuntu)
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install build tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            cmake gcc pkg-config \
-            libxcb1-dev libxcb-util-dev libxcb-keysyms1-dev \
-            libcairo2-dev libpango1.0-dev
-
-      - name: Check file structure
-        run: |
-          echo "=== Project structure ==="
-          find . -name '*.c' -o -name '*.h' -o -name '*.txt' | sort
-          echo ""
-          echo "=== Checking all source files exist ==="
-          for f in \
-            src/main.c src/xim_server.c src/xim_server.h \
-            src/engine.c src/engine.h \
-            src/romaji.c src/romaji.h \
-            src/kana_kanji.c src/kana_kanji.h \
-            src/predict.c src/predict.h \
-            src/dict.c src/dict.h \
-            src/user_dict.c src/user_dict.h \
-            src/candidate_window.c src/candidate_window.h \
-            src/util.c src/util.h \
-            data/romaji_table.txt \
-            CMakeLists.txt; do
-            if [ ! -f "$f" ]; then
-              echo "MISSING: $f"
-              exit 1
-            fi
-            echo "OK: $f"
-          done
-
-      - name: Compile standalone modules (no xcb-imdkit)
-        run: |
-          echo "=== Compiling util.c ==="
-          gcc -c -std=c11 -Wall -Wextra -Isrc src/util.c -o /dev/null
-
-          echo "=== Compiling romaji.c ==="
-          gcc -c -std=c11 -Wall -Wextra -Isrc src/romaji.c -o /dev/null
-
-          echo "=== Compiling dict.c ==="
-          gcc -c -std=c11 -Wall -Wextra -Isrc src/dict.c -o /dev/null
-
-          echo "=== Compiling user_dict.c ==="
-          gcc -c -std=c11 -Wall -Wextra -Isrc src/user_dict.c -o /dev/null
-
-          echo "=== Compiling predict.c ==="
-          gcc -c -std=c11 -Wall -Wextra -Isrc src/predict.c -o /dev/null
-
-          echo "=== Compiling kana_kanji.c ==="
-          gcc -c -std=c11 -Wall -Wextra -Isrc src/kana_kanji.c -o /dev/null
-
-          echo ""
-          echo "=== All standalone modules compile successfully ==="
-
-      - name: Build and run romaji test
-        run: |
-          gcc -std=c11 -Wall -Wextra -Isrc \
-            -DBSDJP_SOURCE_DATA_DIR=\"$PWD/data\" \
-            test/test_romaji.c src/romaji.c src/util.c \
-            -o test_romaji
-          echo "=== Running romaji tests ==="
-          ./test_romaji
-
-      - name: Build and run dict test
-        run: |
-          gcc -std=c11 -Wall -Wextra -Isrc \
-            -DBSDJP_SOURCE_DATA_DIR=\"$PWD/data\" \
-            test/test_dict.c src/dict.c src/util.c \
-            -o test_dict
-          echo "=== Running dict tests ==="
-          ./test_dict || echo "(no dictionary file, expected)"
