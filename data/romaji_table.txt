@@ -1,0 +1,268 @@
+# BSDJP Romaji-to-Kana Conversion Table
+# Format: romaji<TAB>hiragana<TAB>katakana
+# Lines starting with # are comments
+# Longer matches take priority over shorter ones
+
+# --- Vowels ---
+a	あ	ア
+i	い	イ
+u	う	ウ
+e	え	エ
+o	お	オ
+
+# --- K-row ---
+ka	か	カ
+ki	き	キ
+ku	く	ク
+ke	け	ケ
+ko	こ	コ
+
+# --- S-row ---
+sa	さ	サ
+si	し	シ
+su	す	ス
+se	せ	セ
+so	そ	ソ
+shi	し	シ
+
+# --- T-row ---
+ta	た	タ
+ti	ち	チ
+tu	つ	ツ
+te	て	テ
+to	と	ト
+chi	ち	チ
+tsu	つ	ツ
+
+# --- N-row ---
+na	な	ナ
+ni	に	ニ
+nu	ぬ	ヌ
+ne	ね	ネ
+no	の	ノ
+
+# --- H-row ---
+ha	は	ハ
+hi	ひ	ヒ
+hu	ふ	フ
+he	へ	ヘ
+ho	ほ	ホ
+fu	ふ	フ
+
+# --- M-row ---
+ma	ま	マ
+mi	み	ミ
+mu	む	ム
+me	め	メ
+mo	も	モ
+
+# --- Y-row ---
+ya	や	ヤ
+yu	ゆ	ユ
+yo	よ	ヨ
+
+# --- R-row ---
+ra	ら	ラ
+ri	り	リ
+ru	る	ル
+re	れ	レ
+ro	ろ	ロ
+
+# --- W-row ---
+wa	わ	ワ
+wi	ゐ	ヰ
+we	ゑ	ヱ
+wo	を	ヲ
+
+# --- N (standalone) ---
+nn	ん	ン
+n'	ん	ン
+xn	ん	ン
+
+# --- Dakuten (G-row) ---
+ga	が	ガ
+gi	ぎ	ギ
+gu	ぐ	グ
+ge	げ	ゲ
+go	ご	ゴ
+
+# --- Dakuten (Z-row) ---
+za	ざ	ザ
+zi	じ	ジ
+zu	ず	ズ
+ze	ぜ	ゼ
+zo	ぞ	ゾ
+ji	じ	ジ
+
+# --- Dakuten (D-row) ---
+da	だ	ダ
+di	ぢ	ヂ
+du	づ	ヅ
+de	で	デ
+do	ど	ド
+
+# --- Dakuten (B-row) ---
+ba	ば	バ
+bi	び	ビ
+bu	ぶ	ブ
+be	べ	ベ
+bo	ぼ	ボ
+
+# --- Handakuten (P-row) ---
+pa	ぱ	パ
+pi	ぴ	ピ
+pu	ぷ	プ
+pe	ぺ	ペ
+po	ぽ	ポ
+
+# --- Youon (Ky-) ---
+kya	きゃ	キャ
+kyi	きぃ	キィ
+kyu	きゅ	キュ
+kye	きぇ	キェ
+kyo	きょ	キョ
+
+# --- Youon (Sy- / Sh-) ---
+sya	しゃ	シャ
+syi	しぃ	シィ
+syu	しゅ	シュ
+sye	しぇ	シェ
+syo	しょ	ショ
+sha	しゃ	シャ
+shu	しゅ	シュ
+she	しぇ	シェ
+sho	しょ	ショ
+
+# --- Youon (Ty- / Ch-) ---
+tya	ちゃ	チャ
+tyi	ちぃ	チィ
+tyu	ちゅ	チュ
+tye	ちぇ	チェ
+tyo	ちょ	チョ
+cha	ちゃ	チャ
+chu	ちゅ	チュ
+che	ちぇ	チェ
+cho	ちょ	チョ
+
+# --- Youon (Ny-) ---
+nya	にゃ	ニャ
+nyi	にぃ	ニィ
+nyu	にゅ	ニュ
+nye	にぇ	ニェ
+nyo	にょ	ニョ
+
+# --- Youon (Hy-) ---
+hya	ひゃ	ヒャ
+hyi	ひぃ	ヒィ
+hyu	ひゅ	ヒュ
+hye	ひぇ	ヒェ
+hyo	ひょ	ヒョ
+
+# --- Youon (My-) ---
+mya	みゃ	ミャ
+myi	みぃ	ミィ
+myu	みゅ	ミュ
+mye	みぇ	ミェ
+myo	みょ	ミョ
+
+# --- Youon (Ry-) ---
+rya	りゃ	リャ
+ryi	りぃ	リィ
+ryu	りゅ	リュ
+rye	りぇ	リェ
+ryo	りょ	リョ
+
+# --- Youon (Gy-) ---
+gya	ぎゃ	ギャ
+gyi	ぎぃ	ギィ
+gyu	ぎゅ	ギュ
+gye	ぎぇ	ギェ
+gyo	ぎょ	ギョ
+
+# --- Youon (Zy- / Jy- / J-) ---
+zya	じゃ	ジャ
+zyi	じぃ	ジィ
+zyu	じゅ	ジュ
+zye	じぇ	ジェ
+zyo	じょ	ジョ
+ja	じゃ	ジャ
+ju	じゅ	ジュ
+je	じぇ	ジェ
+jo	じょ	ジョ
+jya	じゃ	ジャ
+jyu	じゅ	ジュ
+jyo	じょ	ジョ
+
+# --- Youon (Dy-) ---
+dya	ぢゃ	ヂャ
+dyi	ぢぃ	ヂィ
+dyu	ぢゅ	ヂュ
+dye	ぢぇ	ヂェ
+dyo	ぢょ	ヂョ
+
+# --- Youon (By-) ---
+bya	びゃ	ビャ
+byi	びぃ	ビィ
+byu	びゅ	ビュ
+bye	びぇ	ビェ
+byo	びょ	ビョ
+
+# --- Youon (Py-) ---
+pya	ぴゃ	ピャ
+pyi	ぴぃ	ピィ
+pyu	ぴゅ	ピュ
+pye	ぴぇ	ピェ
+pyo	ぴょ	ピョ
+
+# --- Youon (Fy-) ---
+fa	ふぁ	ファ
+fi	ふぃ	フィ
+fe	ふぇ	フェ
+fo	ふぉ	フォ
+fya	ふゃ	フャ
+fyu	ふゅ	フュ
+fyo	ふょ	フョ
+
+# --- Special: Tsa/Tsi/Tse/Tso ---
+tsa	つぁ	ツァ
+tsi	つぃ	ツィ
+tse	つぇ	ツェ
+tso	つぉ	ツォ
+
+# --- Small kana (x-prefix) ---
+xa	ぁ	ァ
+xi	ぃ	ィ
+xu	ぅ	ゥ
+xe	ぇ	ェ
+xo	ぉ	ォ
+xya	ゃ	ャ
+xyu	ゅ	ュ
+xyo	ょ	ョ
+xtu	っ	ッ
+xtsu	っ	ッ
+xwa	ゎ	ヮ
+xka	ゕ	ヵ
+xke	ゖ	ヶ
+
+# --- Small kana (l-prefix, alternative) ---
+la	ぁ	ァ
+li	ぃ	ィ
+lu	ぅ	ゥ
+le	ぇ	ェ
+lo	ぉ	ォ
+lya	ゃ	ャ
+lyu	ゅ	ュ
+lyo	ょ	ョ
+ltu	っ	ッ
+ltsu	っ	ッ
+lwa	ゎ	ヮ
+
+# --- Sokuon (double consonant) handled in code ---
+# When a consonant is doubled (e.g., "kk", "ss"), insert っ/ッ before
+
+# --- Special symbols ---
+-	ー	ー
+.	。	。
+,	、	、
+?	？	？
+!	！	！

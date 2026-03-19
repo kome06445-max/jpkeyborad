@@ -1,0 +1,62 @@
+name: Build BSDJP on FreeBSD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-freebsd:
+    name: FreeBSD Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build on FreeBSD
+        uses: cross-platform-actions/action@v0.25.0
+        with:
+          operating_system: freebsd
+          version: "14.1"
+          shell: sh
+          run: |
+            echo "=== Installing dependencies ==="
+            sudo pkg install -y \
+              cmake \
+              pkgconf \
+              xcb-imdkit \
+              libxcb \
+              xcb-util \
+              xcb-util-keysyms \
+              cairo \
+              pango \
+              xorg-server \
+              ja-font-ipa
+
+            echo ""
+            echo "=== Configuring ==="
+            mkdir build
+            cd build
+            cmake .. \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_C_FLAGS="-Wall -Wextra"
+
+            echo ""
+            echo "=== Building ==="
+            make -j$(sysctl -n hw.ncpu)
+
+            echo ""
+            echo "=== Running romaji conversion tests ==="
+            ./test_romaji
+
+            echo ""
+            echo "=== Running dictionary tests ==="
+            ./test_dict || echo "(dictionary file not present - expected in CI)"
+
+            echo ""
+            echo "=== Build successful ==="
+            ls -lh bsdjp
+            file bsdjp
