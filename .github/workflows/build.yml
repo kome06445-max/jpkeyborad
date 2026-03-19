@@ -11,17 +11,18 @@ jobs:
   build-freebsd:
     name: FreeBSD Build & Test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v6
 
       - name: Build and test on FreeBSD
-        uses: vmactions/freebsd-vm@v1
+        uses: vmactions/freebsd-vm@v1.4.3
         with:
-          release: "14.2"
+          release: "15.0"
           usesh: true
-          sync: sshfs
-          mem: 4096
+          sync: rsync
+          mem: 8192
           prepare: |
             pkg install -y \
               cmake \
@@ -38,6 +39,8 @@ jobs:
 
           run: |
             set -e
+            freebsd-version
+            echo ""
             echo "=== Configuring ==="
             mkdir -p build
             cd build
@@ -55,7 +58,7 @@ jobs:
 
             echo ""
             echo "=== Running dictionary tests ==="
-            ./test_dict || echo "(dictionary file not present, expected in CI)"
+            ./test_dict || echo "(dictionary not present, expected in CI)"
 
             echo ""
             echo "=== Build successful ==="
