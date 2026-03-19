@@ -13,14 +13,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - name: Build on FreeBSD
+      - name: Build and test on FreeBSD
         uses: vmactions/freebsd-vm@v1
         with:
           release: "14.2"
           usesh: true
+          sync: sshfs
+          mem: 4096
           prepare: |
             pkg install -y \
               cmake \
@@ -34,9 +35,11 @@ jobs:
               libX11 \
               xorgproto \
               ja-font-ipa
+
           run: |
+            set -e
             echo "=== Configuring ==="
-            mkdir build
+            mkdir -p build
             cd build
             cmake .. \
               -DCMAKE_BUILD_TYPE=Release \
@@ -52,7 +55,7 @@ jobs:
 
             echo ""
             echo "=== Running dictionary tests ==="
-            ./test_dict || echo "(dictionary file not present - expected in CI)"
+            ./test_dict || echo "(dictionary file not present, expected in CI)"
 
             echo ""
             echo "=== Build successful ==="
